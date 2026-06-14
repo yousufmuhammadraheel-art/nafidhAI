@@ -5,7 +5,7 @@ Exposes POST /v1/agents/{agent_id}/run
 from __future__ import annotations
 
 from dotenv import load_dotenv
-load_dotenv(dotenv_path=r"D:\nafidhAI\.env")
+load_dotenv()
 
 import os
 import uuid
@@ -34,11 +34,19 @@ logger = structlog.get_logger(__name__)
 
 def create_engine_from_env() -> Any:
     database_url = os.environ["DATABASE_URL"]
+
+    # Railway (and most providers) give postgresql:// — convert to asyncpg driver
+    if database_url.startswith("postgresql://"):
+        database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    elif database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql+asyncpg://", 1)
+
     if not database_url.startswith("postgresql+asyncpg://"):
         raise ValueError(
             "DATABASE_URL must use postgresql+asyncpg:// for async driver. "
             f"Got: {database_url[:30]}..."
         )
+
     return create_async_engine(
         database_url,
         pool_size=10,
@@ -65,7 +73,7 @@ app = FastAPI(
 
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(","),
+    allowed_hosts=os.getenv("ALLOWED_HOSTS", "*").split(","),
 )
 
 
@@ -90,7 +98,6 @@ async def run_agent(
 ) -> AgentRunResult:
     """
     Body mein tenant_id aur agent_definition_id dono required hain.
-    X-Tenant-ID header optional hai — agar nahi hai toh body se liya jayega.
     """
     log = logger.bind(
         tenant_id=str(body.tenant_id),
