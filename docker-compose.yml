@@ -1,0 +1,24 @@
+﻿services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: nafidhAI_postgres
+    environment:
+      POSTGRES_USER: nafidhAI
+      POSTGRES_PASSWORD: nafidhAI123
+      POSTGRES_DB: nafidhAI
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: nafidhAI_redis
+    ports:
+      - "6380:6379"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
