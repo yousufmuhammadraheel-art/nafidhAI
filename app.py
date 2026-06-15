@@ -14,6 +14,7 @@ from typing import Any
 import structlog
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -35,7 +36,6 @@ logger = structlog.get_logger(__name__)
 def create_engine_from_env() -> Any:
     database_url = os.environ["DATABASE_URL"]
 
-    # Railway (and most providers) give postgresql:// — convert to asyncpg driver
     if database_url.startswith("postgresql://"):
         database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
     elif database_url.startswith("postgres://"):
@@ -74,6 +74,15 @@ app = FastAPI(
 app.add_middleware(
     TrustedHostMiddleware,
     allowed_hosts=os.getenv("ALLOWED_HOSTS", "*").split(","),
+)
+
+# CORS — allows the demo UI (and any browser-based client) to call this API
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
